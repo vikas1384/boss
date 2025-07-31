@@ -53,7 +53,8 @@ const state = {
     assessmentComplete: false,
     reportGenerated: false,
     emergencyDetected: false,
-    pendingPdfGeneration: false
+    pendingPdfGeneration: false,
+    autoGeneratingPDF: false
 };
 
     // Emergency Keywords
@@ -178,8 +179,12 @@ function loadPdfLibraries() {
         // Extract user info if not already collected
         extractUserInfo(message);
 
-        // Check if we were waiting for user info and now have it
+        // Check if we were waiting for user info after assessment and now have it
         if (state.assessmentComplete && !state.reportGenerated) {
+            // Extract user info from the current message
+            extractUserInfo(message);
+            
+            // Check if we now have all required information
             if (state.userName && state.userAge && state.userGender) {
                 // Find the assessment response in the conversation history
                 for (let i = state.conversation.length - 1; i >= 0; i--) {
@@ -187,9 +192,43 @@ function loadPdfLibraries() {
                     if (entry.role === 'assistant' && 
                         (entry.content.includes('🧾 Symptom Summary') || 
                          entry.content.includes('🧠 Possible Non-Diagnostic Explanation'))) {
+                        // Generate the report with the collected user information
                         updateReportContent(entry.content);
+                        
+                        // Confirm to the user that their report is ready and automatically generate PDF
+                        setTimeout(() => {
+                            const confirmMessage = `Thank you, ${state.userName}. Your medical report has been generated and is being downloaded automatically.`;
+                            addAIMessage(confirmMessage);
+                            state.conversation.push({ role: 'assistant', content: confirmMessage });
+                            
+                            // Automatically generate and download the PDF
+                            setTimeout(() => {
+                                // Set flag to indicate automatic PDF generation
+                                state.autoGeneratingPDF = true;
+                                generatePDF();
+                                // Reset the flag after generation
+                                setTimeout(() => {
+                                    state.autoGeneratingPDF = false;
+                                }, 1000);
+                            }, 500);
+                        }, 1000);
                         break;
                     }
+                }
+            } else {
+                // If we still don't have all required info, remind the user what's missing
+                let missingInfo = [];
+                if (!state.userName) missingInfo.push("name");
+                if (!state.userAge) missingInfo.push("age");
+                if (!state.userGender) missingInfo.push("gender/sex");
+                
+                if (missingInfo.length > 0 && message.length < 50) {
+                    // Only remind if the user's message is short (likely just answering with partial info)
+                    setTimeout(() => {
+                        const reminderMessage = `I still need your ${missingInfo.join(", ")} to complete your medical report. Please provide this information.`;
+                        addAIMessage(reminderMessage);
+                        state.conversation.push({ role: 'assistant', content: reminderMessage });
+                    }, 1000);
                 }
             }
         }
@@ -331,12 +370,8 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
             response.includes('🧘 Lifestyle Guidance')) {
             state.assessmentComplete = true;
             
-            // If we don't have user information yet, ask for it before generating the report
-            if (!state.userName || !state.userAge || !state.userGender) {
-                promptForUserInfo();
-            } else {
-                updateReportContent(response);
-            }
+            // Always prompt for user information after final consultation
+            promptForUserInfo();
         }
 
         // Display the message in the chat
@@ -346,22 +381,27 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
     
-    // Prompt user for missing information
+    // Prompt user for information needed for the medical report
     function promptForUserInfo() {
-        let missingInfo = [];
+        // Always ask for all information to ensure the report is complete and accurate
+        const promptMessage = `Thank you for sharing your health concerns. To generate your professional medical report, I need the following information:
+
+1. Your full name
+2. Your age
+3. Your gender/sex
+4. Your location (optional)
+
+Please provide this information so I can create a personalized medical report for you.`;
         
-        if (!state.userName) missingInfo.push("name");
-        if (!state.userAge) missingInfo.push("age");
-        if (!state.userGender) missingInfo.push("gender/sex");
+        // Add this as an AI message
+        addAIMessage(promptMessage);
+        state.conversation.push({ role: 'assistant', content: promptMessage });
         
-        if (missingInfo.length > 0) {
-            const infoNeeded = missingInfo.join(", ");
-            const promptMessage = `To generate your health report, I need a few more details. Could you please provide your ${infoNeeded}?`;
-            
-            // Add this as an AI message
-            addAIMessage(promptMessage);
-            state.conversation.push({ role: 'assistant', content: promptMessage });
-        }
+        // Reset user info to ensure fresh data for the report
+        state.userName = '';
+        state.userAge = '';
+        state.userGender = '';
+        state.userLocation = '';
     }
 
     // Update the report content with the assessment - Doctor-friendly version
@@ -371,6 +411,9 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
 
         // Remove any asterisk symbols from the response
         response = response.replace(/\*/g, '');
+
+        // Make the report container visible
+        document.getElementById('report-container').style.display = 'flex';
 
         // Create report header with professional styling
         const reportHeader = document.createElement('div');
@@ -547,13 +590,20 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
         }
         
         // If we have assessment but missing user info, prompt for it
-        if (!state.userName || !state.userAge || !state.userGender) {
+        // Only check this when the button is clicked manually, not when called automatically
+        if ((!state.userName || !state.userAge || !state.userGender) && !state.autoGeneratingPDF) {
             let missingInfo = [];
             if (!state.userName) missingInfo.push("name");
             if (!state.userAge) missingInfo.push("age");
             if (!state.userGender) missingInfo.push("gender/sex");
             
-            alert(`Please provide your ${missingInfo.join(", ")} to complete the health report.`);
+            // Show a more detailed prompt to the user
+            const promptMessage = `To generate your professional medical report, please provide your ${missingInfo.join(", ")}. This information is essential for creating an accurate and personalized report.`;
+            
+            // Add this as an AI message in the chat
+            addAIMessage(promptMessage);
+            state.conversation.push({ role: 'assistant', content: promptMessage });
+            
             console.log(`PDF generation waiting for user info: ${missingInfo.join(", ")}`);
             return;
         }
@@ -788,48 +838,73 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
 
     // Extract user information from messages
     function extractUserInfo(message) {
-        // Simple name extraction (very basic)
-        if (!state.userName) {
-            const nameMatch = message.match(/my name is ([A-Za-z\s]+)/i) || 
-                            message.match(/name[:\s]+([A-Za-z\s]+)/i) || 
-                            message.match(/I am ([A-Za-z\s]+)/i) || 
-                            message.match(/I'm ([A-Za-z\s]+)/i);
-            if (nameMatch && nameMatch[1]) {
-                state.userName = nameMatch[1].trim();
+        // Enhanced name extraction
+        // We're not checking state.userName here because we want to update it if provided again
+        const nameMatch = message.match(/my name is ([A-Za-z\s\.\-']+)/i) || 
+                        message.match(/name[:\s]+([A-Za-z\s\.\-']+)/i) || 
+                        message.match(/I am ([A-Za-z\s\.\-']+)/i) || 
+                        message.match(/I'm ([A-Za-z\s\.\-']+)/i);
+        if (nameMatch && nameMatch[1]) {
+            const potentialName = nameMatch[1].trim();
+            // Only accept as name if it's 2-30 characters and doesn't contain numbers
+            if (potentialName.length >= 2 && potentialName.length <= 30 && !/\d/.test(potentialName)) {
+                state.userName = potentialName;
+            }
+        } else if (message.length < 30 && /^[A-Za-z\s\.\-']+$/.test(message) && message.split(' ').length <= 4) {
+            // If the message is just a short name by itself
+            state.userName = message.trim();
+        }
+
+        // Enhanced age extraction
+        const ageMatch = message.match(/I am (\d+) years old|I'm (\d+) years old|I'm (\d+)|I am (\d+)|age[:\s]+(\d+)|age[:\s]+is (\d+)|age (\d+)|^(\d+)$/i);
+        if (ageMatch) {
+            const age = ageMatch[1] || ageMatch[2] || ageMatch[3] || ageMatch[4] || ageMatch[5] || ageMatch[6] || ageMatch[7] || ageMatch[8];
+            if (age) {
+                const ageNum = parseInt(age);
+                // Only accept reasonable ages
+                if (ageNum > 0 && ageNum < 120) {
+                    state.userAge = ageNum.toString();
+                }
             }
         }
 
-        // Simple age extraction
-        if (!state.userAge) {
-            const ageMatch = message.match(/I am (\d+) years old|I'm (\d+) years old|I'm (\d+)|I am (\d+)|age[:\s]+(\d+)|age[:\s]+is (\d+)|age (\d+)/i);
-            if (ageMatch) {
-                const age = ageMatch[1] || ageMatch[2] || ageMatch[3] || ageMatch[4] || ageMatch[5] || ageMatch[6] || ageMatch[7];
-                if (age) state.userAge = age;
-            }
+        // Enhanced gender extraction
+        const lowerMessage = message.toLowerCase();
+        // Check for male variations
+        if (lowerMessage.includes(' male ') || lowerMessage.includes('i am male') || 
+            lowerMessage.includes("i'm male") || lowerMessage.includes("gender male") || 
+            lowerMessage.includes("gender: male") || lowerMessage.includes("sex male") || 
+            lowerMessage.includes("sex: male") || lowerMessage === "male") {
+            state.userGender = 'Male';
+        } 
+        // Check for female variations
+        else if (lowerMessage.includes(' female ') || lowerMessage.includes('i am female') || 
+                lowerMessage.includes("i'm female") || lowerMessage.includes("gender female") || 
+                lowerMessage.includes("gender: female") || lowerMessage.includes("sex female") || 
+                lowerMessage.includes("sex: female") || lowerMessage === "female") {
+            state.userGender = 'Female';
+        }
+        // Check for other gender identities
+        else if (lowerMessage.includes('non-binary') || lowerMessage.includes('nonbinary') || 
+                lowerMessage.includes('non binary') || lowerMessage === "non-binary" || 
+                lowerMessage === "nonbinary") {
+            state.userGender = 'Non-binary';
+        }
+        else if (lowerMessage.includes('transgender') || lowerMessage.includes('trans') || 
+                lowerMessage === "transgender" || lowerMessage === "trans") {
+            state.userGender = 'Transgender';
+        }
+        else if (lowerMessage.includes('other') && 
+                (lowerMessage.includes('gender') || lowerMessage.includes('sex'))) {
+            state.userGender = 'Other';
         }
 
-        // Simple gender extraction
-        if (!state.userGender) {
-            const lowerMessage = message.toLowerCase();
-            if (lowerMessage.includes(' male ') || lowerMessage.includes('i am male') || 
-                lowerMessage.includes("i'm male") || lowerMessage.includes("gender male") || 
-                lowerMessage.includes("gender: male") || lowerMessage.includes("sex male") || 
-                lowerMessage.includes("sex: male")) {
-                state.userGender = 'Male';
-            } else if (lowerMessage.includes(' female ') || lowerMessage.includes('i am female') || 
-                       lowerMessage.includes("i'm female") || lowerMessage.includes("gender female") || 
-                       lowerMessage.includes("gender: female") || lowerMessage.includes("sex female") || 
-                       lowerMessage.includes("sex: female")) {
-                state.userGender = 'Female';
-            }
-        }
-
-        // Simple location extraction
-        if (!state.userLocation) {
-            const locationMatch = message.match(/I am from ([A-Za-z\s,]+)|I'm from ([A-Za-z\s,]+)|in ([A-Za-z\s,]+)|location[:\s]+([A-Za-z\s,]+)/i);
-            if (locationMatch) {
-                const location = locationMatch[1] || locationMatch[2] || locationMatch[3] || locationMatch[4];
-                if (location) state.userLocation = location.trim();
+        // Enhanced location extraction
+        const locationMatch = message.match(/I am from ([A-Za-z\s,\-\.]+)|I'm from ([A-Za-z\s,\-\.]+)|in ([A-Za-z\s,\-\.]+)|location[:\s]+([A-Za-z\s,\-\.]+)|live in ([A-Za-z\s,\-\.]+)|reside in ([A-Za-z\s,\-\.]+)/i);
+        if (locationMatch) {
+            const location = locationMatch[1] || locationMatch[2] || locationMatch[3] || locationMatch[4] || locationMatch[5] || locationMatch[6];
+            if (location && location.trim().length >= 2 && location.trim().length <= 50) {
+                state.userLocation = location.trim();
             }
         }
     }

@@ -193,6 +193,7 @@ main {
     height: 600px;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 .report-header {
