@@ -10,19 +10,48 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
-        // Verify libraries are loaded correctly
+        // Verify libraries are loaded correctly and make them globally available
         window.addEventListener('DOMContentLoaded', function() {
             console.log('Checking PDF libraries...');
-            if (window.jspdf && window.jspdf.jsPDF) {
-                console.log('jsPDF library loaded successfully');
+            
+            // Make jsPDF globally available
+            if (typeof jspdf !== 'undefined') {
+                window.jspdf = jspdf;
+                console.log('jsPDF library loaded successfully and made global');
+            } else if (window.jspdf && window.jspdf.jsPDF) {
+                console.log('jsPDF library already loaded successfully');
             } else {
                 console.error('jsPDF library not loaded properly');
+                // Try to load it again
+                var jspdfScript = document.createElement('script');
+                jspdfScript.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+                document.head.appendChild(jspdfScript);
+                jspdfScript.onload = function() {
+                    if (typeof jspdf !== 'undefined') {
+                        window.jspdf = jspdf;
+                        console.log('jsPDF library loaded from unpkg and made global');
+                    }
+                };
             }
             
-            if (window.html2canvas) {
-                console.log('html2canvas library loaded successfully');
+            // Make html2canvas globally available
+            if (typeof html2canvas !== 'undefined') {
+                window.html2canvas = html2canvas;
+                console.log('html2canvas library loaded successfully and made global');
+            } else if (window.html2canvas) {
+                console.log('html2canvas library already loaded successfully');
             } else {
                 console.error('html2canvas library not loaded properly');
+                // Try to load it again
+                var html2canvasScript = document.createElement('script');
+                html2canvasScript.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+                document.head.appendChild(html2canvasScript);
+                html2canvasScript.onload = function() {
+                    if (typeof html2canvas !== 'undefined') {
+                        window.html2canvas = html2canvas;
+                        console.log('html2canvas library loaded from unpkg and made global');
+                    }
+                };
             }
         });
     </script>
@@ -60,7 +89,10 @@
             <div class="report-container" id="report-container">
                 <div class="report-header" id="report-header">
                     <h2>Medical Assessment Report</h2>
-                    <button id="download-pdf" class="download-btn"><i class="fas fa-download"></i> Download Medical Report</button>
+                    <div class="download-options">
+                        <button id="download-pdf" class="download-btn"><i class="fas fa-download"></i> Download Medical Report</button>
+                        <button id="download-text" class="alt-download"><i class="fas fa-file-alt"></i> Text Version</button>
+                    </div>
                 </div>
                 <div class="report-content" id="report-content">
                     <!-- Report content will be generated here -->
