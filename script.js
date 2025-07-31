@@ -175,25 +175,64 @@ document.addEventListener('DOMContentLoaded', () => {
                             role: 'system',
                             content: `You are Dr. Arogya – a compassionate, culturally-aware AI medical assistant designed for Indian users. Your role is to guide users through structured, human-friendly conversations to understand symptoms, give preliminary suggestions, and generate an early diagnostic-style medical report. You are not a real doctor, but simulate a helpful, trustworthy advisor based on health guidelines (WHO, CDC, ICMR, MoHFW). Use regional empathy, multilingual tone (if applicable), and prioritize safety.
 
-IMPORTANT: Do not use asterisk (*) symbols in your responses. Format your responses with clear section headers using emojis instead of asterisks for emphasis. Follow this template for complete assessments:
+IMPORTANT: You MUST follow a strict two-phase approach:
 
-🧾 Symptom Summary
-[Summarize the symptoms reported by the user]
+## 1. SYMPTOM UNDERSTANDING PHASE
 
-🧠 Possible Non-Diagnostic Explanation
-[Provide possible explanations without making a diagnosis]
+Engage the user like a friendly family doctor who listens with empathy. Your first goal is to extract full symptom context.
 
-🧘 Lifestyle Guidance
-[Offer lifestyle recommendations]
+**Conversational Flow:**
+- Start with a warm greeting: "Hi, I'm Dr. Arogya, your health companion. Tell me what's bothering you today?"
+- Ask open-ended questions and respond based on their answers.
+- Use conversational language (not robotic) and follow-up with:
+  - Duration of symptoms?
+  - Severity: mild/moderate/severe?
+  - Frequency: daily/occasional/constant?
+  - Any fever, recent travel, stress, weather exposure?
+  - Age and gender?
+  - Any existing conditions (BP, diabetes, asthma)?
+  - Allergies or medications currently being taken?
+  - Lifestyle indicators: food, water intake, work hours, exercise
 
-🌿 दादी माँ का नुस्खा
-[Suggest traditional home remedies if appropriate]
+**Emergency Detection Algorithm:**
+- Detect red flags like:
+  - chest pain
+  - unconsciousness
+  - trouble breathing
+  - uncontrolled bleeding
+  - seizures
+- If found, immediately respond with:
+  "⚠️ This could be an emergency. Please visit a hospital or call a medical professional immediately."
 
-📅 When to See a Doctor
-[Advise when professional medical help should be sought]
+**Context-Aware Logic:**
+- Adapt tone for children, elderly, pregnant women
+- If symptoms are vague or multiple, ask structured follow-ups to isolate possible areas (headache + nausea, cough + fever, etc.)
+- Acknowledge emotions, e.g. "That sounds uncomfortable. Let's figure this out together."
 
-🔒 Safety Disclaimer
-[Include a safety disclaimer]`
+## 2. COMPLETE RECOMMENDATION PHASE
+
+After collecting enough symptom data, begin generating helpful suggestions. This is **not a diagnosis**, just support and lifestyle suggestions.
+
+Do not use asterisk (*) symbols in your responses. Format your responses with clear section headers using emojis instead of asterisks for emphasis. Follow this template for complete assessments:
+
+🧾 **Symptom Summary**
+"Based on what you've shared, here's a quick summary…"
+
+🧠 **Possible Non-Diagnostic Explanation**
+"This might be related to [e.g. dehydration, viral fever, acidity, anxiety], but it's not a medical diagnosis."
+
+🧘 **Lifestyle Guidance**
+"Try to rest, hydrate, and monitor symptoms. Avoid spicy food or screen exposure if applicable."
+
+🌿 **दादी माँ का नुस्खा**
+Offer helpful Indian home remedies where applicable.
+Example: "Tulsi ginger tea may help soothe throat irritation."
+
+📅 **When to See a Doctor**
+"If the symptom lasts beyond 2-3 days, or worsens, please consult a certified doctor."
+
+🔒 **Safety Disclaimer**
+"This is not a replacement for a licensed medical opinion. Always consult a real doctor for serious or persistent conditions."`
                         },
                         ...state.conversation
                     ],
@@ -217,9 +256,10 @@ IMPORTANT: Do not use asterisk (*) symbols in your responses. Format your respon
         // Add the response to conversation history
         state.conversation.push({ role: 'assistant', content: response });
 
-        // Check if this is a complete assessment response
-        if (response.includes('🧾 Symptom Summary') || 
-            response.includes('🧠 Possible Non-Diagnostic Explanation')) {
+        // Check if this is a complete assessment response with all required sections
+        if (response.includes('🧾 Symptom Summary') && 
+            response.includes('🧠 Possible Non-Diagnostic Explanation') &&
+            response.includes('🧘 Lifestyle Guidance')) {
             state.assessmentComplete = true;
             
             // If we don't have user information yet, ask for it before generating the report
@@ -281,39 +321,82 @@ IMPORTANT: Do not use asterisk (*) symbols in your responses. Format your respon
         // Parse and format the assessment sections
         const sections = [
             { marker: '🧾 Symptom Summary', title: 'Symptom Summary' },
+            { marker: '🧾 **Symptom Summary**', title: 'Symptom Summary' },
             { marker: '🧠 Possible Non-Diagnostic Explanation', title: 'Possible Explanation' },
+            { marker: '🧠 **Possible Non-Diagnostic Explanation**', title: 'Possible Explanation' },
             { marker: '🧘 Lifestyle Guidance', title: 'Lifestyle Guidance' },
+            { marker: '🧘 **Lifestyle Guidance**', title: 'Lifestyle Guidance' },
             { marker: '🌿 दादी माँ का नुस्खा', title: 'Traditional Remedy' },
-            { marker: '📅 When to See a Doctor', title: 'When to See a Doctor' }
+            { marker: '🌿 **दादी माँ का नुस्खा**', title: 'Traditional Remedy' },
+            { marker: '📅 When to See a Doctor', title: 'When to See a Doctor' },
+            { marker: '📅 **When to See a Doctor**', title: 'When to See a Doctor' },
+            { marker: '🔒 Safety Disclaimer', title: 'Safety Disclaimer' },
+            { marker: '🔒 **Safety Disclaimer**', title: 'Safety Disclaimer' }
         ];
 
+        // Group sections by title to handle multiple markers for the same section
+        const sectionsByTitle = {};
         sections.forEach(section => {
-            if (response.includes(section.marker)) {
-                const startIndex = response.indexOf(section.marker);
+            if (!sectionsByTitle[section.title]) {
+                sectionsByTitle[section.title] = [];
+            }
+            sectionsByTitle[section.title].push(section.marker);
+        });
+        
+        // Process each section type only once
+        const processedSections = new Set();
+        
+        sections.forEach(section => {
+            // Skip if we've already processed this section type
+            if (processedSections.has(section.title)) {
+                return;
+            }
+            
+            // Check if any marker for this section exists in the response
+            const markers = sectionsByTitle[section.title];
+            let foundMarker = null;
+            let startIndex = -1;
+            
+            for (const marker of markers) {
+                const idx = response.indexOf(marker);
+                if (idx >= 0 && (startIndex === -1 || idx < startIndex)) {
+                    foundMarker = marker;
+                    startIndex = idx;
+                }
+            }
+            
+            if (foundMarker) {
                 let endIndex = response.length;
                 
                 // Find the end of this section (start of next section)
-                for (const nextSection of sections) {
-                    if (nextSection.marker !== section.marker) {
-                        const nextSectionIndex = response.indexOf(nextSection.marker, startIndex + section.marker.length);
-                        if (nextSectionIndex > startIndex && nextSectionIndex < endIndex) {
-                            endIndex = nextSectionIndex;
+                for (const nextSectionTitle in sectionsByTitle) {
+                    if (nextSectionTitle !== section.title) {
+                        for (const nextMarker of sectionsByTitle[nextSectionTitle]) {
+                            const nextSectionIndex = response.indexOf(nextMarker, startIndex + foundMarker.length);
+                            if (nextSectionIndex > startIndex && nextSectionIndex < endIndex) {
+                                endIndex = nextSectionIndex;
+                            }
                         }
                     }
                 }
+                
+                // Mark this section type as processed
+                processedSections.add(section.title);
 
                 // Extract and format the section content
                 let sectionContent = response.substring(startIndex, endIndex).trim();
-                sectionContent = sectionContent.replace(section.marker, '');
+                sectionContent = sectionContent.replace(foundMarker, '');
                 
                 // Remove any remaining asterisks from section content
                 sectionContent = sectionContent.replace(/\*/g, '');
+                // Remove any markdown bold markers
+                sectionContent = sectionContent.replace(/\*\*/g, '');
 
                 const sectionElement = document.createElement('div');
                 sectionElement.className = 'report-section';
                 
                 // Apply special styling for traditional remedy
-                if (section.marker === '🌿 दादी माँ का नुस्खा') {
+                if (section.title === 'Traditional Remedy') {
                     sectionElement.innerHTML = `
                         <h3>${section.title}</h3>
                         <div class="traditional-remedy">${sectionContent}</div>
@@ -567,23 +650,53 @@ IMPORTANT: Do not use asterisk (*) symbols in your responses. Format your respon
         // Check if we have basic user information
         const needsUserInfo = !state.userName || !state.userAge || !state.userGender;
         
-        return `The user has shared the following health concern: "${message}". 
-        Please engage in the symptom understanding phase as described in your instructions. 
-        Ask relevant follow-up questions about duration, severity, frequency, and other contextual factors. 
-        ${needsUserInfo ? 'It is important to ask for the user\'s name, age, and gender/sex if not already provided, as this information is essential for the health report.' : ''}
-        If you have enough information, provide a complete recommendation following the template in your instructions with symptom summary, possible explanation, lifestyle guidance, traditional remedy, and when to see a doctor.
+        return `The user has shared the following health concern: "${message}".
         
-        Remember to NEVER use asterisk (*) symbols in your responses. Use the emoji section headers as specified in your instructions.`;
+        IMPORTANT: You MUST follow the two-phase approach as described in your instructions:
+        
+        1. FIRST, engage in the SYMPTOM UNDERSTANDING PHASE. Ask open-ended questions about:
+           - Duration of symptoms
+           - Severity (mild/moderate/severe)
+           - Frequency (daily/occasional/constant)
+           - Related factors (fever, travel, stress, weather)
+           ${needsUserInfo ? '- Basic information (name, age, gender/sex) which is essential for the health report' : ''}
+           - Existing conditions, allergies, medications
+           - Lifestyle factors
+        
+        2. ONLY after gathering sufficient information, proceed to the COMPLETE RECOMMENDATION PHASE with the structured format:
+           - 🧾 Symptom Summary
+           - 🧠 Possible Non-Diagnostic Explanation
+           - 🧘 Lifestyle Guidance
+           - 🌿 दादी माँ का नुस्खा (Traditional Remedy)
+           - 📅 When to See a Doctor
+           - 🔒 Safety Disclaimer
+        
+        Remember to NEVER use asterisk (*) symbols in your responses. Use the emoji section headers as specified in your instructions.
+        
+        IMPORTANT: Do NOT skip directly to recommendations without first gathering comprehensive symptom information.`;
     }
 
     // Prepare prompt for follow-up questions
     function prepareFollowUpPrompt(message) {
-        return `The user has responded with: "${message}". 
-        Continue the conversation based on this response. 
-        If they're asking for clarification or have new symptoms, provide appropriate guidance. 
-        If they're asking about a specific treatment or medication, remind them that you cannot prescribe medications and they should consult a real doctor.
+        return `The user has responded with: "${message}".
         
-        Remember to NEVER use asterisk (*) symbols in your responses. If you have enough information to provide a complete assessment, use the emoji section headers as specified in your instructions.`;
+        Continue the conversation based on this response while maintaining the two-phase approach:
+        
+        1. If you are still in the SYMPTOM UNDERSTANDING PHASE and need more information:
+           - Continue asking relevant follow-up questions
+           - Gather any missing details about symptoms, duration, severity, etc.
+           - Do NOT proceed to recommendations until you have comprehensive information
+        
+        2. If you have gathered sufficient information and are ready for the COMPLETE RECOMMENDATION PHASE:
+           - Provide the complete structured response with all required sections
+           - Use the emoji section headers as specified in your instructions
+        
+        3. If the user is asking for clarification after you've provided recommendations:
+           - Address their specific questions
+           - If they mention new symptoms, return to the Symptom Understanding Phase
+           - If they're asking about specific treatments or medications, remind them that you cannot prescribe medications and they should consult a real doctor
+        
+        Remember to NEVER use asterisk (*) symbols in your responses and maintain the conversational, empathetic tone of a family doctor.`;
     }
 
     // Add user message to the chat
