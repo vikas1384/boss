@@ -967,7 +967,7 @@ Please provide this information in a single message (for example: "My name is Jo
             });
             
             // Make headings more compact (update existing headings)
-            const headings = reportClone.querySelectorAll('h3');
+            // Use existing headings variable from above
             headings.forEach(heading => {
                 heading.style.fontSize = '11pt';
                 heading.style.marginTop = '3mm';
