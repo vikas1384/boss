@@ -502,7 +502,9 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
             state.assessmentComplete = true;
             
             // Always prompt for user information after final consultation
-            promptForUserInfo();
+            setTimeout(() => {
+                promptForUserInfo();
+            }, 1000); // Slight delay for better user experience
         }
 
         // Display the message in the chat
@@ -515,14 +517,16 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
     // Prompt user for information needed for the medical report
     function promptForUserInfo() {
         // Always ask for all information to ensure the report is complete and accurate
-        const promptMessage = `Thank you for sharing your health concerns. To generate your professional medical report, I need the following information:
+        const promptMessage = `Thank you for sharing your health concerns. Based on our consultation, I can now prepare an early diagnosis report for your doctor.
+
+To generate this professional medical report, I need the following information:
 
 1. Your full name
 2. Your age
 3. Your gender/sex
 4. Your location (optional)
 
-Please provide this information so I can create a personalized medical report for you.`;
+Please provide this information in a single message (for example: "My name is John Doe, 35 years old, male, from Mumbai"), and I'll immediately create a single-page medical report that you can share with your healthcare provider.`;
         
         // Add this as an AI message
         addAIMessage(promptMessage);
@@ -533,6 +537,11 @@ Please provide this information so I can create a personalized medical report fo
         state.userAge = '';
         state.userGender = '';
         state.userLocation = '';
+        
+        // Show a visual indicator that the system is waiting for user information
+        const userInput = document.getElementById('user-input');
+        userInput.placeholder = "Enter your name, age, and gender for the report...";
+        userInput.focus();
     }
 
     // Update the report content with the assessment - Doctor-friendly version
@@ -958,10 +967,11 @@ Please provide this information so I can create a personalized medical report fo
             });
             
             // Make headings more compact (update existing headings)
+            const headings = reportClone.querySelectorAll('h3');
             headings.forEach(heading => {
-                heading.style.fontSize = '12pt';
-                heading.style.marginTop = '4mm';
-                heading.style.marginBottom = '2mm';
+                heading.style.fontSize = '11pt';
+                heading.style.marginTop = '3mm';
+                heading.style.marginBottom = '1mm';
                 heading.style.paddingBottom = '1mm';
                 // Override previous styles
                 heading.style.borderBottom = '1px solid #4285f4';
@@ -971,17 +981,32 @@ Please provide this information so I can create a personalized medical report fo
             // Reduce section spacing
             const sections = reportClone.querySelectorAll('.report-section');
             sections.forEach(section => {
-                section.style.marginBottom = '5mm';
+                section.style.marginBottom = '3mm';
             });
             
-            // Use html2canvas with better error handling
+            // Make disclaimer more compact
+            const disclaimer = reportClone.querySelector('.disclaimer');
+            if (disclaimer) {
+                disclaimer.style.fontSize = '8pt';
+                const disclaimerP = disclaimer.querySelectorAll('p');
+                disclaimerP.forEach(p => {
+                    p.style.margin = '0.5mm 0';
+                    p.style.fontSize = '8pt';
+                    p.style.lineHeight = '1.1';
+                });
+            }
+            
+            // Use html2canvas with better error handling and scaling for single page
             window.html2canvas(reportClone, {
                 scale: 2, // Higher quality
                 useCORS: true, // Allow cross-origin images
                 logging: true, // Enable logging for debugging
                 backgroundColor: '#ffffff', // Ensure white background
                 width: reportClone.offsetWidth,
-                height: reportClone.offsetHeight
+                height: reportClone.offsetHeight,
+                // Center content horizontally
+                x: -15, // Adjust for better horizontal centering
+                windowWidth: reportClone.offsetWidth + 30
             }).then(canvas => {
                 console.log('Canvas generated successfully, dimensions:', canvas.width, 'x', canvas.height);
                 
@@ -995,10 +1020,10 @@ Please provide this information so I can create a personalized medical report fo
                 const imgHeight = canvas.height * imgWidth / canvas.width;
                 
                 // Check if content will fit on a single page
-                const maxContentHeight = pageHeight - (margin * 2) - 20; // 20mm reserved for footer
+                const maxContentHeight = pageHeight - (margin * 2) - 15; // 15mm reserved for footer
                 
                 if (imgHeight > maxContentHeight) {
-                    console.log('Content too large for single page, scaling down to fit...');
+                    console.log('Content too large for single page, intelligently scaling down to fit...');
                     // Scale down to fit on a single page
                     const scaleFactor = maxContentHeight / imgHeight;
                     const scaledWidth = imgWidth * scaleFactor;
@@ -1010,19 +1035,18 @@ Please provide this information so I can create a personalized medical report fo
                     doc.addImage(imgData, 'PNG', horizontalOffset, margin, scaledWidth, maxContentHeight);
                 } else {
                     // Add the report image to the page (it already fits)
-                    doc.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+                    // Center it vertically if there's extra space
+                    const verticalOffset = margin + (maxContentHeight - imgHeight) / 2;
+                    doc.addImage(imgData, 'PNG', margin, verticalOffset, imgWidth, imgHeight);
                 }
                 
-                // Add professional footer
-                doc.setFontSize(8);
+                // Add simplified footer for single-page report
+                doc.setFontSize(7);
                 doc.setTextColor(100, 100, 100);
-                doc.text('Page 1 of 1', pageWidth / 2, pageHeight - 5, { align: 'center' });
                 
-                // Add disclaimer footer
-                doc.setFontSize(6);
-                doc.setTextColor(150, 150, 150);
+                // Add disclaimer footer - simplified for single page
                 doc.text('This is an AI-generated report and not a substitute for professional medical advice. Please consult a healthcare provider.', 
-                         pageWidth / 2, pageHeight - 10, { align: 'center', maxWidth: pageWidth - 20 });
+                         pageWidth / 2, pageHeight - 7, { align: 'center', maxWidth: pageWidth - 20 });
                 
                 // Add generation date
                 doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 
@@ -1039,7 +1063,7 @@ Please provide this information so I can create a personalized medical report fo
                     `Medical_Report_${formattedDate}.pdf`;
                     
                 doc.save(fileName);
-                console.log('Professional single-page medical PDF report generated and saved successfully');
+                console.log('Professional single-page medical PDF report generated and saved successfully as: ' + fileName);
                 
                 // Show success message to user
                 alert('Your medical report PDF has been generated and downloaded successfully.');
@@ -1138,73 +1162,129 @@ Please provide this information so I can create a personalized medical report fo
 
     // Extract user information from messages
     function extractUserInfo(message) {
-        // Enhanced name extraction
-        // We're not checking state.userName here because we want to update it if provided again
-        const nameMatch = message.match(/my name is ([A-Za-z\s\.\-']+)/i) || 
-                        message.match(/name[:\s]+([A-Za-z\s\.\-']+)/i) || 
-                        message.match(/I am ([A-Za-z\s\.\-']+)/i) || 
-                        message.match(/I'm ([A-Za-z\s\.\-']+)/i);
-        if (nameMatch && nameMatch[1]) {
-            const potentialName = nameMatch[1].trim();
-            // Only accept as name if it's 2-30 characters and doesn't contain numbers
-            if (potentialName.length >= 2 && potentialName.length <= 30 && !/\d/.test(potentialName)) {
-                state.userName = potentialName;
+        // First, try to extract all information from a combined format
+        // This handles cases like "My name is John Doe, 35 years old, male, from Mumbai"
+        const combinedInfoRegex = /(?:(?:my name is|name[:\s]+|i am|i'm)\s+([A-Za-z\s\.\-']+))?,?\s*(?:(\d+)\s*(?:years old|years|yrs|yr|y\.?o\.?|age)?)?,?\s*(?:(male|female|non-binary|nonbinary|transgender|trans|other))?,?(?:\s*(?:from|in|location[:\s]+|live in|reside in)\s+([A-Za-z\s,\-\.]+))?/i;
+        
+        const combinedMatch = message.match(combinedInfoRegex);
+        if (combinedMatch) {
+            // Extract name if present in the combined match
+            if (combinedMatch[1]) {
+                const potentialName = combinedMatch[1].trim();
+                if (potentialName.length >= 2 && potentialName.length <= 30 && !/\d/.test(potentialName)) {
+                    state.userName = potentialName;
+                }
             }
-        } else if (message.length < 30 && /^[A-Za-z\s\.\-']+$/.test(message) && message.split(' ').length <= 4) {
-            // If the message is just a short name by itself
-            state.userName = message.trim();
-        }
-
-        // Enhanced age extraction
-        const ageMatch = message.match(/I am (\d+) years old|I'm (\d+) years old|I'm (\d+)|I am (\d+)|age[:\s]+(\d+)|age[:\s]+is (\d+)|age (\d+)|^(\d+)$/i);
-        if (ageMatch) {
-            const age = ageMatch[1] || ageMatch[2] || ageMatch[3] || ageMatch[4] || ageMatch[5] || ageMatch[6] || ageMatch[7] || ageMatch[8];
-            if (age) {
-                const ageNum = parseInt(age);
-                // Only accept reasonable ages
+            
+            // Extract age if present in the combined match
+            if (combinedMatch[2]) {
+                const ageNum = parseInt(combinedMatch[2]);
                 if (ageNum > 0 && ageNum < 120) {
                     state.userAge = ageNum.toString();
                 }
             }
+            
+            // Extract gender if present in the combined match
+            if (combinedMatch[3]) {
+                const gender = combinedMatch[3].toLowerCase();
+                if (gender === 'male') {
+                    state.userGender = 'Male';
+                } else if (gender === 'female') {
+                    state.userGender = 'Female';
+                } else if (gender === 'non-binary' || gender === 'nonbinary') {
+                    state.userGender = 'Non-binary';
+                } else if (gender === 'transgender' || gender === 'trans') {
+                    state.userGender = 'Transgender';
+                } else if (gender === 'other') {
+                    state.userGender = 'Other';
+                }
+            }
+            
+            // Extract location if present in the combined match
+            if (combinedMatch[4]) {
+                const location = combinedMatch[4].trim();
+                if (location.length >= 2 && location.length <= 50) {
+                    state.userLocation = location;
+                }
+            }
+        }
+        
+        // If combined extraction didn't work, fall back to individual extractions
+        
+        // Enhanced name extraction (if not already set by combined match)
+        if (!state.userName) {
+            const nameMatch = message.match(/my name is ([A-Za-z\s\.\-']+)/i) || 
+                            message.match(/name[:\s]+([A-Za-z\s\.\-']+)/i) || 
+                            message.match(/I am ([A-Za-z\s\.\-']+)/i) || 
+                            message.match(/I'm ([A-Za-z\s\.\-']+)/i);
+            if (nameMatch && nameMatch[1]) {
+                const potentialName = nameMatch[1].trim();
+                // Only accept as name if it's 2-30 characters and doesn't contain numbers
+                if (potentialName.length >= 2 && potentialName.length <= 30 && !/\d/.test(potentialName)) {
+                    state.userName = potentialName;
+                }
+            } else if (message.length < 30 && /^[A-Za-z\s\.\-']+$/.test(message) && message.split(' ').length <= 4) {
+                // If the message is just a short name by itself
+                state.userName = message.trim();
+            }
         }
 
-        // Enhanced gender extraction
-        const lowerMessage = message.toLowerCase();
-        // Check for male variations
-        if (lowerMessage.includes(' male ') || lowerMessage.includes('i am male') || 
-            lowerMessage.includes("i'm male") || lowerMessage.includes("gender male") || 
-            lowerMessage.includes("gender: male") || lowerMessage.includes("sex male") || 
-            lowerMessage.includes("sex: male") || lowerMessage === "male") {
-            state.userGender = 'Male';
-        } 
-        // Check for female variations
-        else if (lowerMessage.includes(' female ') || lowerMessage.includes('i am female') || 
-                lowerMessage.includes("i'm female") || lowerMessage.includes("gender female") || 
-                lowerMessage.includes("gender: female") || lowerMessage.includes("sex female") || 
-                lowerMessage.includes("sex: female") || lowerMessage === "female") {
-            state.userGender = 'Female';
-        }
-        // Check for other gender identities
-        else if (lowerMessage.includes('non-binary') || lowerMessage.includes('nonbinary') || 
-                lowerMessage.includes('non binary') || lowerMessage === "non-binary" || 
-                lowerMessage === "nonbinary") {
-            state.userGender = 'Non-binary';
-        }
-        else if (lowerMessage.includes('transgender') || lowerMessage.includes('trans') || 
-                lowerMessage === "transgender" || lowerMessage === "trans") {
-            state.userGender = 'Transgender';
-        }
-        else if (lowerMessage.includes('other') && 
-                (lowerMessage.includes('gender') || lowerMessage.includes('sex'))) {
-            state.userGender = 'Other';
+        // Enhanced age extraction (if not already set by combined match)
+        if (!state.userAge) {
+            const ageMatch = message.match(/I am (\d+) years old|I'm (\d+) years old|I'm (\d+)|I am (\d+)|age[:\s]+(\d+)|age[:\s]+is (\d+)|age (\d+)|^(\d+)$/i);
+            if (ageMatch) {
+                const age = ageMatch[1] || ageMatch[2] || ageMatch[3] || ageMatch[4] || ageMatch[5] || ageMatch[6] || ageMatch[7] || ageMatch[8];
+                if (age) {
+                    const ageNum = parseInt(age);
+                    // Only accept reasonable ages
+                    if (ageNum > 0 && ageNum < 120) {
+                        state.userAge = ageNum.toString();
+                    }
+                }
+            }
         }
 
-        // Enhanced location extraction
-        const locationMatch = message.match(/I am from ([A-Za-z\s,\-\.]+)|I'm from ([A-Za-z\s,\-\.]+)|in ([A-Za-z\s,\-\.]+)|location[:\s]+([A-Za-z\s,\-\.]+)|live in ([A-Za-z\s,\-\.]+)|reside in ([A-Za-z\s,\-\.]+)/i);
-        if (locationMatch) {
-            const location = locationMatch[1] || locationMatch[2] || locationMatch[3] || locationMatch[4] || locationMatch[5] || locationMatch[6];
-            if (location && location.trim().length >= 2 && location.trim().length <= 50) {
-                state.userLocation = location.trim();
+        // Enhanced gender extraction (if not already set by combined match)
+        if (!state.userGender) {
+            const lowerMessage = message.toLowerCase();
+            // Check for male variations
+            if (lowerMessage.includes(' male ') || lowerMessage.includes('i am male') || 
+                lowerMessage.includes("i'm male") || lowerMessage.includes("gender male") || 
+                lowerMessage.includes("gender: male") || lowerMessage.includes("sex male") || 
+                lowerMessage.includes("sex: male") || lowerMessage === "male") {
+                state.userGender = 'Male';
+            } 
+            // Check for female variations
+            else if (lowerMessage.includes(' female ') || lowerMessage.includes('i am female') || 
+                    lowerMessage.includes("i'm female") || lowerMessage.includes("gender female") || 
+                    lowerMessage.includes("gender: female") || lowerMessage.includes("sex female") || 
+                    lowerMessage.includes("sex: female") || lowerMessage === "female") {
+                state.userGender = 'Female';
+            }
+            // Check for other gender identities
+            else if (lowerMessage.includes('non-binary') || lowerMessage.includes('nonbinary') || 
+                    lowerMessage.includes('non binary') || lowerMessage === "non-binary" || 
+                    lowerMessage === "nonbinary") {
+                state.userGender = 'Non-binary';
+            }
+            else if (lowerMessage.includes('transgender') || lowerMessage.includes('trans') || 
+                    lowerMessage === "transgender" || lowerMessage === "trans") {
+                state.userGender = 'Transgender';
+            }
+            else if (lowerMessage.includes('other') && 
+                    (lowerMessage.includes('gender') || lowerMessage.includes('sex'))) {
+                state.userGender = 'Other';
+            }
+        }
+
+        // Enhanced location extraction (if not already set by combined match)
+        if (!state.userLocation) {
+            const locationMatch = message.match(/I am from ([A-Za-z\s,\-\.]+)|I'm from ([A-Za-z\s,\-\.]+)|in ([A-Za-z\s,\-\.]+)|location[:\s]+([A-Za-z\s,\-\.]+)|live in ([A-Za-z\s,\-\.]+)|reside in ([A-Za-z\s,\-\.]+)/i);
+            if (locationMatch) {
+                const location = locationMatch[1] || locationMatch[2] || locationMatch[3] || locationMatch[4] || locationMatch[5] || locationMatch[6];
+                if (location && location.trim().length >= 2 && location.trim().length <= 50) {
+                    state.userLocation = location.trim();
+                }
             }
         }
         
@@ -1215,6 +1295,16 @@ Please provide this information so I can create a personalized medical report fo
             gender: state.userGender,
             location: state.userLocation
         });
+        
+        // Check if we have all required information for the report
+        if (state.userName && state.userAge && state.userGender && state.assessmentComplete) {
+            console.log('All required information collected, generating report...');
+            // Automatically generate the report after a short delay
+            setTimeout(() => {
+                updateReportContent();
+                generatePDF();
+            }, 1500);
+        }
     }
 
     // Generate a unique report ID
