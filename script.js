@@ -957,13 +957,15 @@ Please provide this information so I can create a personalized medical report fo
                 p.style.lineHeight = '1.2';
             });
             
-            // Make headings more compact
-            const headings = reportClone.querySelectorAll('h3');
+            // Make headings more compact (update existing headings)
             headings.forEach(heading => {
                 heading.style.fontSize = '12pt';
                 heading.style.marginTop = '4mm';
                 heading.style.marginBottom = '2mm';
                 heading.style.paddingBottom = '1mm';
+                // Override previous styles
+                heading.style.borderBottom = '1px solid #4285f4';
+                heading.style.color = '#4285f4';
             });
             
             // Reduce section spacing
