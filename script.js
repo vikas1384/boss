@@ -364,7 +364,7 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
         }
     }
 
-    // Update the report content with the assessment
+    // Update the report content with the assessment - Doctor-friendly version
     function updateReportContent(response) {
         // Clear placeholder text
         reportContent.innerHTML = '';
@@ -372,9 +372,9 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
         // Remove any asterisk symbols from the response
         response = response.replace(/\*/g, '');
 
-        // Create report header
+        // Create report header with professional styling
         const reportHeader = document.createElement('div');
-        reportHeader.className = 'report-section';
+        reportHeader.className = 'report-section patient-info';
         reportHeader.innerHTML = `
             <h3>Patient Information</h3>
             <p><strong>Name:</strong> ${state.userName || 'Anonymous User'}</p>
@@ -387,20 +387,20 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
         `;
         reportContent.appendChild(reportHeader);
 
-        // Parse and format the assessment sections
+        // Parse and format the assessment sections with improved styling
         const sections = [
-            { marker: '🧾 Symptom Summary', title: 'Symptom Summary' },
-            { marker: '🧾 **Symptom Summary**', title: 'Symptom Summary' },
-            { marker: '🧠 Possible Non-Diagnostic Explanation', title: 'Possible Explanation' },
-            { marker: '🧠 **Possible Non-Diagnostic Explanation**', title: 'Possible Explanation' },
-            { marker: '🧘 Lifestyle Guidance', title: 'Lifestyle Guidance' },
-            { marker: '🧘 **Lifestyle Guidance**', title: 'Lifestyle Guidance' },
-            { marker: '🌿 दादी माँ का नुस्खा', title: 'Traditional Remedy' },
-            { marker: '🌿 **दादी माँ का नुस्खा**', title: 'Traditional Remedy' },
-            { marker: '📅 When to See a Doctor', title: 'When to See a Doctor' },
-            { marker: '📅 **When to See a Doctor**', title: 'When to See a Doctor' },
-            { marker: '🔒 Safety Disclaimer', title: 'Safety Disclaimer' },
-            { marker: '🔒 **Safety Disclaimer**', title: 'Safety Disclaimer' }
+            { marker: '🧾 Symptom Summary', title: 'Symptom Summary', className: 'symptom-summary' },
+            { marker: '🧾 **Symptom Summary**', title: 'Symptom Summary', className: 'symptom-summary' },
+            { marker: '🧠 Possible Non-Diagnostic Explanation', title: 'Clinical Assessment', className: 'explanation' },
+            { marker: '🧠 **Possible Non-Diagnostic Explanation**', title: 'Clinical Assessment', className: 'explanation' },
+            { marker: '🧘 Lifestyle Guidance', title: 'Lifestyle Guidance', className: 'doctor-advice' },
+            { marker: '🧘 **Lifestyle Guidance**', title: 'Lifestyle Guidance', className: 'doctor-advice' },
+            { marker: '🌿 दादी माँ का नुस्खा', title: 'Supportive Care Measures', className: 'traditional-remedy' },
+            { marker: '🌿 **दादी माँ का नुस्खा**', title: 'Supportive Care Measures', className: 'traditional-remedy' },
+            { marker: '📅 When to See a Doctor', title: 'Medical Recommendations', className: 'doctor-advice' },
+            { marker: '📅 **When to See a Doctor**', title: 'Medical Recommendations', className: 'doctor-advice' },
+            { marker: '🔒 Safety Disclaimer', title: 'Medical Disclaimer', className: 'disclaimer' },
+            { marker: '🔒 **Safety Disclaimer**', title: 'Medical Disclaimer', className: 'disclaimer' }
         ];
 
         // Group sections by title to handle multiple markers for the same section
@@ -462,26 +462,57 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
                 sectionContent = sectionContent.replace(/\*\*/g, '');
 
                 const sectionElement = document.createElement('div');
-                sectionElement.className = 'report-section';
+                sectionElement.className = `report-section ${section.className}`;
                 
-                // Apply special styling for traditional remedy
-                if (section.title === 'Traditional Remedy') {
-                    sectionElement.innerHTML = `
-                        <h3>${section.title}</h3>
-                        <div class="traditional-remedy">${sectionContent}</div>
-                    `;
+                // Create section title with professional styling
+                const sectionTitle = document.createElement('h3');
+                sectionTitle.textContent = section.title;
+                sectionElement.appendChild(sectionTitle);
+                
+                // Process content based on section type for better structure
+                if (section.title === 'Symptom Summary' || section.title === 'Clinical Assessment') {
+                    // For these sections, we want to preserve paragraph structure but format it better
+                    const paragraphs = sectionContent.split('\n\n');
+                    paragraphs.forEach(paragraph => {
+                        if (paragraph.trim()) {
+                            // Check if this is a list item
+                            if (paragraph.trim().startsWith('-') || paragraph.trim().startsWith('*')) {
+                                // Create a list for bullet points
+                                const list = document.createElement('ul');
+                                
+                                // Split by line breaks and process each list item
+                                const items = paragraph.split('\n');
+                                items.forEach(item => {
+                                    if (item.trim()) {
+                                        const listItem = document.createElement('li');
+                                        // Remove bullet character and trim
+                                        listItem.textContent = item.trim().replace(/^[-*]\s*/, '');
+                                        list.appendChild(listItem);
+                                    }
+                                });
+                                
+                                sectionElement.appendChild(list);
+                            } else {
+                                // Regular paragraph
+                                const p = document.createElement('p');
+                                p.textContent = paragraph.trim();
+                                sectionElement.appendChild(p);
+                            }
+                        }
+                    });
                 } else {
-                    sectionElement.innerHTML = `
-                        <h3>${section.title}</h3>
-                        <p>${sectionContent}</p>
-                    `;
+                    // For other sections, create a more structured format
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'section-content';
+                    contentDiv.textContent = sectionContent;
+                    sectionElement.appendChild(contentDiv);
                 }
                 
                 reportContent.appendChild(sectionElement);
             }
         });
 
-        // Add emergency indicator if detected
+        // Add emergency indicator if detected with prominent styling
         if (state.emergencyDetected) {
             const emergencyElement = document.createElement('div');
             emergencyElement.className = 'emergency-indicator';
@@ -491,11 +522,13 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
             reportContent.appendChild(emergencyElement);
         }
 
-        // Add disclaimer
+        // Add professional disclaimer with improved styling
         const disclaimerElement = document.createElement('div');
-        disclaimerElement.className = 'disclaimer';
+        disclaimerElement.className = 'report-section disclaimer';
         disclaimerElement.innerHTML = `
-            <p>🔒 <strong>Safety Disclaimer:</strong> This is not a replacement for a licensed medical opinion. Always consult a real doctor for serious or persistent conditions.</p>
+            <h3>Medical Disclaimer</h3>
+            <p><strong>Important:</strong> This report is generated by an AI system and is intended for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider for medical concerns.</p>
+            <p style="font-size: 12px; color: #666; margin-top: 15px; text-align: right;">Generated by Arogya AI on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
         `;
         reportContent.appendChild(disclaimerElement);
 
@@ -503,7 +536,7 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
         state.reportGenerated = true;
     }
 
-    // Generate PDF from the report content
+    // Generate PDF from the report content - Doctor-friendly version
     function generatePDF() {
         console.log('Starting PDF generation process...');
         
@@ -567,7 +600,12 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
             
             console.log('PDF libraries verified, proceeding with PDF generation...');
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            // Create PDF in portrait mode with A4 dimensions (210 x 297 mm)
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
             
             // Show loading message
             const loadingMessage = document.createElement('div');
@@ -575,115 +613,151 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
             loadingMessage.textContent = 'Generating PDF...';
             document.body.appendChild(loadingMessage);
             
-            // Make sure report content and container are visible and properly sized
-            reportContent.style.display = 'block';
+            // Create a clone of the report content for PDF generation
+            const reportClone = document.createElement('div');
+            reportClone.id = 'report-clone';
+            reportClone.style.position = 'absolute';
+            reportClone.style.left = '-9999px';
+            reportClone.style.width = '210mm'; // A4 width
+            reportClone.style.backgroundColor = '#ffffff';
+            reportClone.style.padding = '15mm';
+            reportClone.style.boxSizing = 'border-box';
+            reportClone.style.fontFamily = 'Arial, sans-serif';
+            reportClone.innerHTML = reportContent.innerHTML;
+            document.body.appendChild(reportClone);
             
-            // Ensure the report container is visible and has dimensions
-            const reportContainer = document.getElementById('report-container');
-            if (reportContainer) {
-                reportContainer.style.display = 'block';
-                reportContainer.style.visibility = 'visible';
-                reportContainer.style.opacity = '1';
-                reportContainer.style.height = 'auto';
-                reportContainer.style.overflow = 'visible';
+            // Apply professional styling to the cloned report
+            const reportSections = reportClone.querySelectorAll('.report-section');
+            reportSections.forEach(section => {
+                section.style.marginBottom = '10mm';
+                section.style.pageBreakInside = 'avoid';
+                section.style.clear = 'both';
+            });
+            
+            // Style headings for better readability
+            const headings = reportClone.querySelectorAll('h3');
+            headings.forEach(heading => {
+                heading.style.borderBottom = '1px solid #4285f4';
+                heading.style.paddingBottom = '2mm';
+                heading.style.marginBottom = '4mm';
+                heading.style.color = '#4285f4';
+                heading.style.fontSize = '14pt';
+            });
+            
+            // Make patient info more compact and professional
+            const patientInfoSection = reportClone.querySelector('.report-section:first-child');
+            if (patientInfoSection) {
+                const infoItems = patientInfoSection.querySelectorAll('p');
+                infoItems.forEach(item => {
+                    item.style.margin = '2mm 0';
+                    item.style.fontSize = '10pt';
+                });
             }
             
-            // Force a small delay to ensure the report is fully rendered
-            setTimeout(() => {
-                console.log('Report container dimensions:', reportContainer.offsetWidth, 'x', reportContainer.offsetHeight);
-                console.log('Report content dimensions:', reportContent.offsetWidth, 'x', reportContent.offsetHeight);
-            }, 100);
+            // Add a professional letterhead
+            const letterhead = document.createElement('div');
+            letterhead.style.borderBottom = '2px solid #4285f4';
+            letterhead.style.marginBottom = '10mm';
+            letterhead.style.paddingBottom = '5mm';
+            letterhead.style.textAlign = 'center';
+            letterhead.innerHTML = `
+                <h1 style="color: #4285f4; margin: 0; font-size: 18pt;">Arogya AI Health Assessment</h1>
+                <p style="color: #666; margin: 2mm 0 0 0; font-size: 10pt;">AI-Generated Health Report | Confidential Medical Information</p>
+            `;
+            reportClone.insertBefore(letterhead, reportClone.firstChild);
             
-            console.log('Starting html2canvas rendering...');
+            // Add a watermark to indicate this is an AI-generated report
+            const watermark = document.createElement('div');
+            watermark.style.position = 'absolute';
+            watermark.style.top = '50%';
+            watermark.style.left = '50%';
+            watermark.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
+            watermark.style.fontSize = '24pt';
+            watermark.style.color = 'rgba(200, 200, 200, 0.2)';
+            watermark.style.pointerEvents = 'none';
+            watermark.style.zIndex = '1000';
+            watermark.style.width = '100%';
+            watermark.style.textAlign = 'center';
+            watermark.textContent = 'AI-GENERATED REPORT';
+            reportClone.appendChild(watermark);
+            
+            console.log('Starting html2canvas rendering of professionally styled report...');
             // Use html2canvas with better error handling
-            window.html2canvas(reportContent, {
+            window.html2canvas(reportClone, {
                 scale: 2, // Higher quality
                 useCORS: true, // Allow cross-origin images
                 logging: true, // Enable logging for debugging
                 backgroundColor: '#ffffff', // Ensure white background
-                onclone: (clonedDoc) => {
-                    // Make sure all elements are visible in the clone
-                    const clonedContent = clonedDoc.getElementById('report-content');
-                    if (clonedContent) {
-                        clonedContent.style.display = 'block';
-                        clonedContent.style.width = reportContent.offsetWidth + 'px';
-                        clonedContent.style.height = 'auto';
-                        clonedContent.style.overflow = 'visible';
-                        clonedContent.style.backgroundColor = '#ffffff';
-                        clonedContent.style.padding = '20px';
-                        clonedContent.style.boxSizing = 'border-box';
-                        
-                        // Ensure all child elements are visible and properly styled
-                        const sections = clonedContent.querySelectorAll('.report-section');
-                        sections.forEach(section => {
-                            section.style.marginBottom = '20px';
-                            section.style.pageBreakInside = 'avoid';
-                        });
-                        
-                        console.log('Clone prepared with dimensions:', clonedContent.style.width, clonedContent.style.height);
-                    }
-                    
-                    // Also ensure the report container is properly styled
-                    const clonedContainer = clonedDoc.getElementById('report-container');
-                    if (clonedContainer) {
-                        clonedContainer.style.display = 'block';
-                        clonedContainer.style.visibility = 'visible';
-                        clonedContainer.style.backgroundColor = '#ffffff';
-                    }
-                }
+                width: reportClone.offsetWidth,
+                height: reportClone.offsetHeight
             }).then(canvas => {
                 console.log('Canvas generated successfully, dimensions:', canvas.width, 'x', canvas.height);
                 
                 const imgData = canvas.toDataURL('image/png');
-                const imgWidth = 190;
-                const pageHeight = 290;
+                const pageWidth = 210; // A4 width in mm
+                const pageHeight = 297; // A4 height in mm
+                const margin = 10; // margin in mm
+                const imgWidth = pageWidth - (margin * 2);
                 const imgHeight = canvas.height * imgWidth / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 10;
-
-                // Add title to the PDF
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Arogya AI Health Report', 105, 15, { align: 'center' });
                 
-                // Add the report image
-                doc.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight);
-                heightLeft -= (pageHeight - 25);
-
-                // Add new pages if the content is too long
-                while (heightLeft >= 0) {
+                // Add the report image to the first page
+                doc.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+                
+                // If content exceeds page height, add new pages
+                let heightLeft = imgHeight;
+                let position = margin;
+                
+                heightLeft -= (pageHeight - margin * 2);
+                while (heightLeft > 0) {
                     position = heightLeft - imgHeight;
                     doc.addPage();
-                    doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
+                    doc.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+                    heightLeft -= (pageHeight - margin * 2);
                 }
-
-                // Add footer to all pages
+                
+                // Add professional footer to all pages
                 const pageCount = doc.internal.getNumberOfPages();
                 for (let i = 1; i <= pageCount; i++) {
                     doc.setPage(i);
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(`Generated by Arogya AI on ${new Date().toLocaleDateString()} - Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+                    
+                    // Add page number
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+                    
+                    // Add disclaimer footer
+                    doc.setFontSize(6);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text('This is an AI-generated report and not a substitute for professional medical advice. Please consult a healthcare provider.', 
+                             pageWidth / 2, pageHeight - 10, { align: 'center', maxWidth: pageWidth - 20 });
+                    
+                    // Add generation date
+                    doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 
+                             margin, pageHeight - 5);
                 }
-
-                // Remove loading message
+                
+                // Remove temporary elements
+                document.body.removeChild(reportClone);
                 document.body.removeChild(loadingMessage);
                 
-                // Save the PDF with patient name if available
+                // Save the PDF with a professional filename
+                const formattedDate = new Date().toISOString().split('T')[0];
                 const fileName = state.userName ? 
-                    `Arogya_Health_Report_${state.userName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf` : 
-                    `Arogya_Health_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                    `Medical_Report_${state.userName.replace(/\s+/g, '_')}_${formattedDate}.pdf` : 
+                    `Medical_Report_${formattedDate}.pdf`;
                     
                 doc.save(fileName);
-                console.log('PDF generated and saved successfully');
+                console.log('Professional medical PDF report generated and saved successfully');
                 
                 // Show success message to user
-                alert('Health report PDF has been generated and downloaded successfully.');
+                alert('Your medical report PDF has been generated and downloaded successfully.');
             }).catch(error => {
                 console.error('Error generating PDF with html2canvas:', error);
                 if (document.body.contains(loadingMessage)) {
                     document.body.removeChild(loadingMessage);
+                }
+                if (document.body.contains(reportClone)) {
+                    document.body.removeChild(reportClone);
                 }
                 alert('There was an error generating the PDF. Please try again.');
             });
