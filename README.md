@@ -26,12 +26,36 @@ Arogya AI is a compassionate, culturally-aware AI medical assistant designed for
 
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 - Internet connection
+- Node.js (v16 or higher) for production deployment
 
-### Installation
+### Local Development
 
 1. Clone this repository or download the ZIP file
 2. Extract the files to your preferred location
-3. Open `index.html` in your web browser
+3. Create a `.env` file in the root directory with your API keys (see `.env.example`)
+4. Install dependencies: `npm install`
+5. Start the development server: `npm run dev`
+6. Open your browser and navigate to `http://localhost:8000`
+
+### Production Deployment
+
+#### Netlify Deployment
+
+1. Fork or clone this repository to your GitHub account
+2. Sign up for a [Netlify](https://www.netlify.com/) account
+3. Create a new site from Git and select your repository
+4. Configure environment variables in Netlify dashboard (add your API keys)
+5. Deploy with the following settings:
+   - Build command: `npm install`
+   - Publish directory: `.`
+
+#### Heroku Deployment
+
+1. Fork or clone this repository to your GitHub account
+2. Sign up for a [Heroku](https://www.heroku.com/) account
+3. Create a new app and connect to your GitHub repository
+4. Configure environment variables in Heroku dashboard (add your API keys)
+5. Deploy the application
 
 ## 💻 Usage
 
@@ -71,9 +95,12 @@ Arogya AI prioritizes user privacy. While the application uses AI APIs to proces
 ## 🛠️ Technologies Used
 
 - HTML5, CSS3, JavaScript
+- Node.js and Express for server-side functionality
+- Environment variables for secure API key management
 - Claude 3.5 / GPT-4o API via OpenRouter
 - jsPDF for PDF generation
 - html2canvas for report capture
+- Netlify/Heroku for deployment
 
 ## 📄 License
 

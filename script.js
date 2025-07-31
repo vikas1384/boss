@@ -12,10 +12,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const callEmergencyButton = document.getElementById('call-emergency');
     const closeAlertButton = document.getElementById('close-alert');
 
-    // API Keys
-    const GROQ_API_KEY = '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';
-    const PERPLEXITY_API_KEY = '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';
-    const GEMINI_API_KEY = 'AIzaSyAwcu3ReSGk3NB0nk6MGicEdUsmwIv93cE';
+    // API Keys - Will be fetched from server
+    let GROQ_API_KEY = '';
+    let PERPLEXITY_API_KEY = '';
+    let GEMINI_API_KEY = '';
+    
+    // Fetch API keys from server
+    async function fetchAPIKeys() {
+        try {
+            // In development/local environment, the server might not be running
+            // So we'll use a fallback mechanism to handle both scenarios
+            const response = await fetch('/api/keys', { method: 'GET' })
+                .catch(() => {
+                    console.log('Using default API keys (local development)');
+                    return { ok: false };
+                });
+            
+            if (response.ok) {
+                const keys = await response.json();
+                GROQ_API_KEY = keys.groq || GROQ_API_KEY;
+                PERPLEXITY_API_KEY = keys.perplexity || PERPLEXITY_API_KEY;
+                GEMINI_API_KEY = keys.gemini || GEMINI_API_KEY;
+            }
+            // If fetch fails, we'll continue with the hardcoded keys
+        } catch (error) {
+            console.error('Error fetching API keys:', error);
+            // Continue with default keys
+        }
+    }
 
     // Application State
     const state = {
@@ -39,7 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     // Initialize the chat with a welcome message
-    function initChat() {
+    async function initChat() {
+        // Fetch API keys first
+        await fetchAPIKeys();
         addAIMessage("Hi, I'm Dr. Arogya, your health companion. Tell me what's bothering you today?");
     }
 
@@ -346,6 +372,7 @@ IMPORTANT: Do not use asterisk (*) symbols in your responses. Format your respon
         // If report not yet generated but we have all info, generate it now
         if (!state.reportGenerated) {
             // Find the assessment response in the conversation history
+            let foundAssessment = false;
             for (let i = state.conversation.length - 1; i >= 0; i--) {
                 const entry = state.conversation[i];
                 if (entry.role === 'assistant' && 
@@ -354,69 +381,106 @@ IMPORTANT: Do not use asterisk (*) symbols in your responses. Format your respon
                     // Remove any asterisks from the content before updating the report
                     const cleanContent = entry.content.replace(/\*/g, '');
                     updateReportContent(cleanContent);
+                    foundAssessment = true;
                     break;
                 }
             }
+            
+            // If no assessment found in conversation history, show error
+            if (!foundAssessment) {
+                alert('Unable to generate report. Please complete a consultation first.');
+                console.error('No assessment found in conversation history');
+                return;
+            }
         }
 
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        // Show loading message
-        const loadingMessage = document.createElement('div');
-        loadingMessage.className = 'loading-message';
-        loadingMessage.textContent = 'Generating PDF...';
-        document.body.appendChild(loadingMessage);
-        
-        // Use html2canvas to capture the report content
-        html2canvas(reportContent).then(canvas => {
-            const imgData = canvas.toDataURL('image/png');
-            const imgWidth = 190;
-            const pageHeight = 290;
-            const imgHeight = canvas.height * imgWidth / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 10;
-
-            // Add title to the PDF
-            doc.setFontSize(16);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Arogya AI Health Report', 105, 15, { align: 'center' });
-            
-            // Add the report image
-            doc.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight);
-            heightLeft -= (pageHeight - 25);
-
-            // Add new pages if the content is too long
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                doc.addPage();
-                doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
+        try {
+            // Ensure jsPDF is properly loaded
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                console.error('jsPDF library not properly loaded');
+                alert('PDF generation library not loaded properly. Please refresh the page and try again.');
+                return;
             }
-
-            // Add footer to all pages
-            const pageCount = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`Generated by Arogya AI on ${new Date().toLocaleDateString()} - Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
-            }
-
-            // Remove loading message
-            document.body.removeChild(loadingMessage);
             
-            // Save the PDF with patient name if available
-            const fileName = state.userName ? 
-                `Arogya_Health_Report_${state.userName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf` : 
-                `Arogya_Health_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Show loading message
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'loading-message';
+            loadingMessage.textContent = 'Generating PDF...';
+            document.body.appendChild(loadingMessage);
+            
+            // Make sure report content is visible
+            reportContent.style.display = 'block';
+            
+            // Use html2canvas with better error handling
+            html2canvas(reportContent, {
+                scale: 2, // Higher quality
+                useCORS: true, // Allow cross-origin images
+                logging: true, // Enable logging for debugging
+                onclone: (clonedDoc) => {
+                    // Make sure all elements are visible in the clone
+                    const clonedContent = clonedDoc.getElementById('report-content');
+                    if (clonedContent) {
+                        clonedContent.style.display = 'block';
+                        clonedContent.style.width = reportContent.offsetWidth + 'px';
+                        clonedContent.style.height = 'auto';
+                    }
+                }
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 190;
+                const pageHeight = 290;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 10;
+
+                // Add title to the PDF
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Arogya AI Health Report', 105, 15, { align: 'center' });
                 
-            doc.save(fileName);
-        }).catch(error => {
-            console.error('Error generating PDF:', error);
-            document.body.removeChild(loadingMessage);
-            alert('There was an error generating the PDF. Please try again.');
-        });
+                // Add the report image
+                doc.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight);
+                heightLeft -= (pageHeight - 25);
+
+                // Add new pages if the content is too long
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                // Add footer to all pages
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Generated by Arogya AI on ${new Date().toLocaleDateString()} - Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+                }
+
+                // Remove loading message
+                document.body.removeChild(loadingMessage);
+                
+                // Save the PDF with patient name if available
+                const fileName = state.userName ? 
+                    `Arogya_Health_Report_${state.userName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf` : 
+                    `Arogya_Health_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                    
+                doc.save(fileName);
+                console.log('PDF generated successfully');
+            }).catch(error => {
+                console.error('Error generating PDF with html2canvas:', error);
+                document.body.removeChild(loadingMessage);
+                alert('There was an error generating the PDF. Please try again.');
+            });
+        } catch (error) {
+            console.error('Error in PDF generation process:', error);
+            alert('There was an error generating the PDF. Please check console for details.');
+        }
     }
 
     // Check for emergency keywords in user message
