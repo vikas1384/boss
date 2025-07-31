@@ -1,10 +1,10 @@
-# Arogya AI - Your Personal Health Co-Pilot
+# Arogya AI - Professional Health Assessment Tool
 
 ![Arogya AI](https://img.shields.io/badge/Arogya-AI-4285f4)
 ![Version](https://img.shields.io/badge/version-1.0.0-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Arogya AI is a compassionate, culturally-aware AI medical assistant designed for Indian users. It guides users through structured, human-friendly conversations to understand symptoms, give preliminary suggestions, and generate an early diagnostic-style medical report in PDF format.
+Arogya AI is a compassionate, culturally-aware AI medical assistant designed for Indian users. It guides users through structured, human-friendly conversations to understand symptoms, give preliminary suggestions, and generate a professional, doctor-friendly medical report in PDF format.
 
 ## 🌟 Features
 
@@ -16,9 +16,11 @@ Arogya AI is a compassionate, culturally-aware AI medical assistant designed for
 
 - **Symptom Assessment**: Helps users understand their symptoms and provides appropriate guidance while clearly communicating limitations.
 
-- **PDF Report Generation**: Creates downloadable health reports summarizing the consultation.
+- **Professional PDF Report Generation**: Creates downloadable doctor-friendly medical reports with professional formatting, structured sections, and clinical terminology suitable for healthcare professionals.
 
-- **Emergency Detection**: Identifies potential emergency situations and provides appropriate alerts.
+- **Emergency Detection**: Identifies potential emergency situations and provides appropriate alerts with clear guidance.
+
+- **Clinical Assessment Format**: Organizes health information in a structured format familiar to healthcare providers, including symptom summary, clinical assessment, and medical recommendations.
 
 ## 🚀 Getting Started
 
@@ -49,25 +51,37 @@ Arogya AI is a compassionate, culturally-aware AI medical assistant designed for
    - Build command: `npm install`
    - Publish directory: `.`
 
-#### Heroku Deployment
+#### Render Deployment
 
 1. Fork or clone this repository to your GitHub account
-2. Sign up for a [Heroku](https://www.heroku.com/) account
-3. Create a new app and connect to your GitHub repository
-4. Configure environment variables in Heroku dashboard (add your API keys)
-5. Deploy the application
+2. Sign up for a [Render](https://render.com/) account
+3. Create a new Web Service and connect to your GitHub repository
+4. Configure the Web Service with these settings:
+   - Environment: `Node`
+   - Build Command: `npm install`
+   - Start Command: `npm start`
+5. Add environment variables in Render dashboard:
+   - GROQ_API_KEY: Your GROQ API key
+   - NODE_ENV: `production`
+6. Click "Create Web Service" to deploy the application
 
 ## 💻 Usage
 
 1. Type your health concern or symptoms in the chat box
 2. Dr. Arogya will ask follow-up questions to better understand your condition
 3. After gathering sufficient information, Dr. Arogya will provide:
-   - A symptom summary
-   - Possible non-diagnostic explanation
-   - Lifestyle guidance
+   - A comprehensive symptom summary
+   - Clinical assessment with possible explanations
+   - Professional medical recommendations
+   - Supportive care measures
    - Traditional remedies when applicable
-   - Advice on when to see a doctor
-4. A health report will be generated that you can download as a PDF
+   - Clear guidance on when to seek professional medical attention
+4. A professional medical report will be generated that you can download as a PDF, formatted for healthcare professionals with:
+   - Patient information section
+   - Structured clinical assessment
+   - Professional medical terminology
+   - Clear sections with visual hierarchy
+   - Medical disclaimer and AI-generated watermark
 
 ## 🌐 Language Support
 
@@ -97,10 +111,10 @@ Arogya AI prioritizes user privacy. While the application uses AI APIs to proces
 - HTML5, CSS3, JavaScript
 - Node.js and Express for server-side functionality
 - Environment variables for secure API key management
-- Claude 3.5 / GPT-4o API via OpenRouter
-- jsPDF for PDF generation
-- html2canvas for report capture
-- Netlify/Heroku for deployment
+- GROQ API (llama3-70b-8192 model) for AI-powered health assessment
+- jsPDF for professional PDF report generation
+- html2canvas for high-quality report capture
+- Render for cloud deployment
 
 ## 📄 License
 
