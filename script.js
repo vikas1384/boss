@@ -402,6 +402,13 @@ IMPORTANT: Do not use asterisk (*) symbols in your responses. Format your respon
                 return;
             }
             
+            // Ensure html2canvas is properly loaded
+            if (!window.html2canvas) {
+                console.error('html2canvas library not properly loaded');
+                alert('PDF generation library (html2canvas) not loaded properly. Please refresh the page and try again.');
+                return;
+            }
+            
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
@@ -415,7 +422,7 @@ IMPORTANT: Do not use asterisk (*) symbols in your responses. Format your respon
             reportContent.style.display = 'block';
             
             // Use html2canvas with better error handling
-            html2canvas(reportContent, {
+            window.html2canvas(reportContent, {
                 scale: 2, // Higher quality
                 useCORS: true, // Allow cross-origin images
                 logging: true, // Enable logging for debugging
