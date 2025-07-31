@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
+  <!-- Background Circle -->
+  <circle cx="50" cy="50" r="48" fill="#4285f4" />
+  
+  <!-- Heartbeat Line -->
+  <path d="M20,50 L35,50 L40,35 L50,65 L60,20 L70,50 L85,50" 
+        stroke="white" 
+        stroke-width="5" 
+        fill="none" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+  
+  <!-- Cross Symbol -->
+  <path d="M50,30 L50,70 M30,50 L70,50" 
+        stroke="#ea4335" 
+        stroke-width="4" 
+        stroke-linecap="round" 
+        opacity="0.7" />
+</svg>

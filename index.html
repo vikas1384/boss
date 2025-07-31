@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arogya AI - Your Personal Health Co-Pilot</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-heartbeat"></i>
+                <h1>Arogya AI</h1>
+            </div>
+            <p class="tagline">Your Personal AI Doctor - 24/7 Health Co-Pilot</p>
+        </header>
+
+        <main>
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages will be added here dynamically -->
+                </div>
+                <div class="user-input">
+                    <textarea id="user-message" placeholder="Describe your symptoms or health concerns..."></textarea>
+                    <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+                <div class="language-selector">
+                    <label for="language">Language:</label>
+                    <select id="language">
+                        <option value="english" selected>English</option>
+                        <option value="hindi">Hindi</option>
+                        <option value="marathi">Marathi</option>
+                        <option value="kannada">Kannada</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="report-container" id="report-container">
+                <div class="report-header">
+                    <h2>Health Report</h2>
+                    <button id="download-pdf" class="download-btn"><i class="fas fa-download"></i> Download PDF</button>
+                </div>
+                <div class="report-content" id="report-content">
+                    <!-- Report content will be generated here -->
+                    <p class="placeholder-text">Your health report will appear here after consultation.</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Arogya AI is not a replacement for professional medical advice. Always consult a qualified healthcare provider for serious health concerns.</p>
+            <p>&copy; 2023 Arogya AI - Your Health Co-Pilot</p>
+        </footer>
+    </div>
+
+    <div id="emergency-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-exclamation-triangle"></i> Emergency Alert</h2>
+            <p>This could be a medical emergency. Please visit a hospital or call a medical professional immediately.</p>
+            <div class="emergency-actions">
+                <button id="call-emergency">Call Emergency Services</button>
+                <button id="close-alert">I Understand</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
