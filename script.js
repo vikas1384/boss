@@ -42,18 +42,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Application State
-    const state = {
-        conversation: [],
-        currentLanguage: 'english',
-        userName: '',
-        userLocation: '',
-        userAge: '',
-        userGender: '',
-        symptomData: {},
-        assessmentComplete: false,
-        reportGenerated: false,
-        emergencyDetected: false
-    };
+const state = {
+    conversation: [],
+    currentLanguage: 'english',
+    userName: '',
+    userLocation: '',
+    userAge: '',
+    userGender: '',
+    symptomData: {},
+    assessmentComplete: false,
+    reportGenerated: false,
+    emergencyDetected: false,
+    pendingPdfGeneration: false
+};
 
     // Emergency Keywords
     const emergencyKeywords = [
@@ -66,8 +67,76 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initChat() {
         // Fetch API keys first
         await fetchAPIKeys();
+        
+        // Verify PDF libraries are loaded correctly
+        console.log('Verifying PDF libraries on initialization...');
+        if (window.jspdf && window.jspdf.jsPDF) {
+            console.log('jsPDF library loaded successfully');
+        } else {
+            console.error('jsPDF library not loaded properly');
+            // Try to reload the library
+            loadPdfLibraries();
+        }
+        
+        if (window.html2canvas) {
+            console.log('html2canvas library loaded successfully');
+        } else {
+            console.error('html2canvas library not loaded properly');
+            // Try to reload the library
+            loadPdfLibraries();
+        }
+        
+        // Check if both libraries are loaded properly
+        if (!window.jspdf || !window.jspdf.jsPDF || !window.html2canvas) {
+            console.log('PDF libraries not fully loaded during initialization, attempting to load them now...');
+            loadPdfLibraries();
+        } else {
+            console.log('All PDF libraries successfully verified during initialization');
+        }
+        
         addAIMessage("Hi, I'm Dr. Arogya, your health companion. Tell me what's bothering you today?");
     }
+    
+    // Function to load PDF libraries if they're not loaded properly
+function loadPdfLibraries() {
+    console.log('Attempting to load PDF libraries...');
+    
+    // Load jsPDF
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        const jspdfScript = document.createElement('script');
+        jspdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        jspdfScript.async = true;
+        jspdfScript.onload = () => {
+            console.log('jsPDF library loaded dynamically');
+            // Check if both libraries are loaded and retry PDF generation if needed
+            if (window.html2canvas && window.jspdf && window.jspdf.jsPDF && state.pendingPdfGeneration) {
+                console.log('Both libraries loaded, retrying PDF generation...');
+                state.pendingPdfGeneration = false;
+                generatePDF();
+            }
+        };
+        jspdfScript.onerror = () => console.error('Failed to load jsPDF library dynamically');
+        document.head.appendChild(jspdfScript);
+    }
+    
+    // Load html2canvas
+    if (!window.html2canvas) {
+        const html2canvasScript = document.createElement('script');
+        html2canvasScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        html2canvasScript.async = true;
+        html2canvasScript.onload = () => {
+            console.log('html2canvas library loaded dynamically');
+            // Check if both libraries are loaded and retry PDF generation if needed
+            if (window.html2canvas && window.jspdf && window.jspdf.jsPDF && state.pendingPdfGeneration) {
+                console.log('Both libraries loaded, retrying PDF generation...');
+                state.pendingPdfGeneration = false;
+                generatePDF();
+            }
+        };
+        html2canvasScript.onerror = () => console.error('Failed to load html2canvas library dynamically');
+        document.head.appendChild(html2canvasScript);
+    }
+}
 
     // Event Listeners
     sendButton.addEventListener('click', handleUserMessage);
@@ -436,8 +505,11 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
 
     // Generate PDF from the report content
     function generatePDF() {
+        console.log('Starting PDF generation process...');
+        
         if (!state.assessmentComplete) {
             alert('Please complete a consultation first to generate a report.');
+            console.log('PDF generation aborted: No assessment completed');
             return;
         }
         
@@ -449,11 +521,13 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
             if (!state.userGender) missingInfo.push("gender/sex");
             
             alert(`Please provide your ${missingInfo.join(", ")} to complete the health report.`);
+            console.log(`PDF generation waiting for user info: ${missingInfo.join(", ")}`);
             return;
         }
         
         // If report not yet generated but we have all info, generate it now
         if (!state.reportGenerated) {
+            console.log('Report not yet generated, searching for assessment in conversation history...');
             // Find the assessment response in the conversation history
             let foundAssessment = false;
             for (let i = state.conversation.length - 1; i >= 0; i--) {
@@ -463,6 +537,7 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
                      entry.content.includes('🧠 Possible Non-Diagnostic Explanation'))) {
                     // Remove any asterisks from the content before updating the report
                     const cleanContent = entry.content.replace(/\*/g, '');
+                    console.log('Assessment found in conversation history, updating report content...');
                     updateReportContent(cleanContent);
                     foundAssessment = true;
                     break;
@@ -478,20 +553,19 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
         }
 
         try {
-            // Ensure jsPDF is properly loaded
-            if (!window.jspdf || !window.jspdf.jsPDF) {
-                console.error('jsPDF library not properly loaded');
-                alert('PDF generation library not loaded properly. Please refresh the page and try again.');
+            console.log('Checking PDF libraries before generation...');
+            // Check if libraries are loaded, if not, try to load them
+            if (!window.jspdf || !window.jspdf.jsPDF || !window.html2canvas) {
+                console.error('PDF libraries not properly loaded, attempting to load them now...');
+                state.pendingPdfGeneration = true;
+                loadPdfLibraries();
+                
+                // Show a message to the user
+                alert('PDF generation libraries are being loaded. The download will start automatically once ready.');
                 return;
             }
             
-            // Ensure html2canvas is properly loaded
-            if (!window.html2canvas) {
-                console.error('html2canvas library not properly loaded');
-                alert('PDF generation library (html2canvas) not loaded properly. Please refresh the page and try again.');
-                return;
-            }
-            
+            console.log('PDF libraries verified, proceeding with PDF generation...');
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
@@ -501,14 +575,32 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
             loadingMessage.textContent = 'Generating PDF...';
             document.body.appendChild(loadingMessage);
             
-            // Make sure report content is visible
+            // Make sure report content and container are visible and properly sized
             reportContent.style.display = 'block';
             
+            // Ensure the report container is visible and has dimensions
+            const reportContainer = document.getElementById('report-container');
+            if (reportContainer) {
+                reportContainer.style.display = 'block';
+                reportContainer.style.visibility = 'visible';
+                reportContainer.style.opacity = '1';
+                reportContainer.style.height = 'auto';
+                reportContainer.style.overflow = 'visible';
+            }
+            
+            // Force a small delay to ensure the report is fully rendered
+            setTimeout(() => {
+                console.log('Report container dimensions:', reportContainer.offsetWidth, 'x', reportContainer.offsetHeight);
+                console.log('Report content dimensions:', reportContent.offsetWidth, 'x', reportContent.offsetHeight);
+            }, 100);
+            
+            console.log('Starting html2canvas rendering...');
             // Use html2canvas with better error handling
             window.html2canvas(reportContent, {
                 scale: 2, // Higher quality
                 useCORS: true, // Allow cross-origin images
                 logging: true, // Enable logging for debugging
+                backgroundColor: '#ffffff', // Ensure white background
                 onclone: (clonedDoc) => {
                     // Make sure all elements are visible in the clone
                     const clonedContent = clonedDoc.getElementById('report-content');
@@ -516,9 +608,32 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
                         clonedContent.style.display = 'block';
                         clonedContent.style.width = reportContent.offsetWidth + 'px';
                         clonedContent.style.height = 'auto';
+                        clonedContent.style.overflow = 'visible';
+                        clonedContent.style.backgroundColor = '#ffffff';
+                        clonedContent.style.padding = '20px';
+                        clonedContent.style.boxSizing = 'border-box';
+                        
+                        // Ensure all child elements are visible and properly styled
+                        const sections = clonedContent.querySelectorAll('.report-section');
+                        sections.forEach(section => {
+                            section.style.marginBottom = '20px';
+                            section.style.pageBreakInside = 'avoid';
+                        });
+                        
+                        console.log('Clone prepared with dimensions:', clonedContent.style.width, clonedContent.style.height);
+                    }
+                    
+                    // Also ensure the report container is properly styled
+                    const clonedContainer = clonedDoc.getElementById('report-container');
+                    if (clonedContainer) {
+                        clonedContainer.style.display = 'block';
+                        clonedContainer.style.visibility = 'visible';
+                        clonedContainer.style.backgroundColor = '#ffffff';
                     }
                 }
             }).then(canvas => {
+                console.log('Canvas generated successfully, dimensions:', canvas.width, 'x', canvas.height);
+                
                 const imgData = canvas.toDataURL('image/png');
                 const imgWidth = 190;
                 const pageHeight = 290;
@@ -561,10 +676,15 @@ Example: "Tulsi ginger tea may help soothe throat irritation."
                     `Arogya_Health_Report_${new Date().toISOString().split('T')[0]}.pdf`;
                     
                 doc.save(fileName);
-                console.log('PDF generated successfully');
+                console.log('PDF generated and saved successfully');
+                
+                // Show success message to user
+                alert('Health report PDF has been generated and downloaded successfully.');
             }).catch(error => {
                 console.error('Error generating PDF with html2canvas:', error);
-                document.body.removeChild(loadingMessage);
+                if (document.body.contains(loadingMessage)) {
+                    document.body.removeChild(loadingMessage);
+                }
                 alert('There was an error generating the PDF. Please try again.');
             });
         } catch (error) {
